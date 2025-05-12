@@ -6,6 +6,11 @@ doodle:
   organizermail: "olivier.barais@gmail.com"
   tmpfolder: "/tmp/excelFiles"
 quarkus:
+  metrics:
+    enabled: true
+    export:
+      prometheus:
+        enabled: true
   datasource:
     db-kind: mysql
     username: tlc
