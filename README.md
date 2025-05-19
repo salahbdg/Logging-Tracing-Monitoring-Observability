@@ -188,7 +188,20 @@ Now that we have successfully set up prometheus and grafana, we can Monitor CPU,
 
 See HTTP request throughput, latency, and error rates.
 
-Track database connection usage, query performance and more.
+Now we can check if the connection to prometheus is successful by visiting [localhost:](http://localhost:9090/targets), and we need to get 
+![alt text](image.png)
+
+We can even try to tap some metrics directly on prometheus,
+![alt text](image-1.png)
+
+Now we can build our grafana dashboard to track many metrics, all the tracked metrics  can be found in grafana-dashboard.json under the key expr.
+
+Here a screenshot of our dashboard
+![alt text](image-2.png)
+![alt text](image-3.png)
+
+
+We defined a json file 
 
 ---
 
@@ -240,7 +253,3 @@ Would you like me to generate the full `docker-compose.yml` file with all these 
 
 
 ## Tracing
-
-
-
-## Observability
