@@ -36,6 +36,24 @@ services:
     ports:
       - "3000:3000"
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    ports:
+      - "16686:16686" # UI
+      - "6831:6831/udp" # UDP Thrift compact
+      - "6832:6832/udp" # UDP Th
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - /var/log:/var/log              # Access host logs
+      - ./promtail-config.yaml:/etc/promtail/config.yaml
+    command: -config.file=/etc/promtail/config.yaml
 
 networks:
   monitoring:

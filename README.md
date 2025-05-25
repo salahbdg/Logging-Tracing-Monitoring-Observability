@@ -283,7 +283,7 @@ This dashboard provides real-time insights into the performance and health of ou
 
 
 
-These metrics are visualized in Grafana dashboards, which are configured using the `grafana-dashboard.json` file. The `expr` key in this JSON file contains the PromQL expressions used to query Prometheus for these metrics.
+These metrics are visualized in Grafana dashboards, which are configured using the <a href="https://github.com/salahbdg/Logging-Tracing-Monitoring-Observability/blob/main/grafana-dashboard.json">grafana-dashboard.json</a> file. The `expr` key in this JSON file contains the PromQL expressions used to query Prometheus for these metrics.
 
 By monitoring these metrics, we can ensure the health, performance, and reliability of our application.
 
@@ -307,14 +307,17 @@ Now a possible next step is to set up alerts, this could allow us to :
 
   * Improves system reliability by enabling fast incident response.
 
+Luckily, on grafana it's easy to setup alerts for our monitored metrics, we only click a specific metric in the dashboard, like system cpu load, then we select new alert rule, we define our query and alert condition, for example for system cpu load,  our condition could be when percent is above 40%.
+![alt text](image-9.png)
+
 ---
 
 
 ## Tracing : Why is the system behaving that way?
+In this section, we will be using Jaeger and Opentracing, a common used tool for tracing tasks.
 
-
-## Installation of Jaeger & OpenTracing :
 ### Adding a dependance in the pom/xml of doodle/api :
+In case it doesn't exist, add this dependency in you pom.xml
 ```xml
 <dependency>
       <groupId>io.quarkus</groupId>
@@ -348,9 +351,14 @@ quarkus:
 
 ## Launch of Jaeger
 
-To launch Jaeger (in docker) simply run :
+Add Jaeger image to your docker compose:
 ```sh
-$ docker run -p 5775:5775/udp -p 6831:6831/udp -p 6832:6832/udp -p 5778:5778 -p 16686:16686 -p 14268:14268 jaegertracing/all-in-one:latest
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    ports:
+      - "16686:16686" # UI
+      - "6831:6831/udp" # UDP Thrift compact
+      - "6832:6832/udp" # UDP Th
 ```
 
 Finally go to: http://localhost:16686/ to open the Jaeger UI
@@ -359,8 +367,8 @@ Finally go to: http://localhost:16686/ to open the Jaeger UI
 
 Then we test by creating a survey on doodle, then we trace the request,
 here is a result on jaeger
-![alt text](image-5.png)
-![alt text](image-6.png)
+![alt text](image-7.png)
+![alt text](image-8.png)
 
 At the top of the trace view, the **dot** represents when a request was made and how long it took to complete (i.e., time to response). Clicking on this dot allows us to dive into the corresponding **trace** for more detailed insights.
 
@@ -385,4 +393,60 @@ A **span** in Jaeger represents a single unit of work within the trace. It inclu
 
 ## Logging : recording detailed, timestamped records of events
 
-... to finish
+In this step, we introduce Loki and Promtail to enable centralized logging for our application. Loki is Grafana's log aggregation system, and Promtail is the agent that ships logs to Loki.
+Loki stores and indexes logs efficiently.
+Promtail collects logs from the host and forwards them to Loki. This stack integrates seamlessly with Grafana to enable powerful log visualization and search.
+
+We need to add this services to our docker compose
+
+```code
+services:
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - /var/log:/var/log
+      - ./promtail-config.yaml:/etc/promtail/config.yaml
+    command: -config.file=/etc/promtail/config.yaml
+```
+
+and create a file in /api promtail-config.yaml
+
+```code
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/*.log
+
+```
+
+This configuration tells Promtail to listen locally on port 9080 and read logs from /var/log/*.log, the label the logs as part of the varlogs job, and finally send the log data to the Loki service.
+
+We can now open now add Loki as datasource on grafana and query our logs using **{job="varlogs"}**
+
+![alt text](image-10.png)
+
+
+## Conclusion
+
+By implementing logging, tracing, monitoring, and observability for our microservices-based web app, we have established a robust foundation for understanding and improving the system's performance, reliability, and user experience. Tools like Prometheus, Grafana, Jaeger, Loki, and Promtail enable us to gain deep insights into the application's behavior, identify bottlenecks, and respond proactively to issues. These practices not only enhance the development and operational workflows but also ensure a seamless experience for end-users. Moving forward, we can further refine our setup by adding alerting mechanisms, optimizing configurations, and exploring advanced features of these tools to continuously improve our system's observability.
+
